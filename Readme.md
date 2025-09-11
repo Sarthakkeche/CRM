@@ -6,8 +6,8 @@ This is a full-stack Mini CRM (Customer Relationship Management) application bui
 
 ## 🚀 Live Demo
 
-* **Frontend:** [Link to your deployed frontend on Vercel/Netlify]
-* **Backend:** [Link to your deployed backend on Render/Heroku]
+* **Frontend:**  [https://crm-one-sage.vercel.app/]
+* **Backend:** [https://crm-88d6.onrender.com/]
 
 ---
 
@@ -54,8 +54,8 @@ This is a full-stack Mini CRM (Customer Relationship Management) application bui
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/YourUsername/mern-mini-crm.git](https://github.com/YourUsername/mern-mini-crm.git)
-    cd mern-mini-crm
+    git clone [https://github.com/Sarthakkeche/CRM.git](https://github.com/Sarthakkeche/CRM.git)
+    cd CRM
     ```
 
 2.  **Backend Setup:**
