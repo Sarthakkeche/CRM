@@ -1,0 +1,193 @@
+/* --- Variables & Global Styles --- */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+:root {
+  --primary-color: #4a90e2; /* A nice blue */
+  --primary-hover: #357abd;
+  --background-color: #f4f7f9;
+  --surface-color: #ffffff;
+  --text-color: #333333;
+  --text-light: #5a5a5a;
+  --border-color: #e0e0e0;
+  --danger-color: #e74c3c;
+}
+
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+main {
+  padding: 1rem;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 1.5rem auto;
+  padding: 1.5rem;
+  background: var(--surface-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+}
+
+/* --- Navbar --- */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+  padding: 0.75rem 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.navbar-brand {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+.navbar-links span {
+    margin-right: 1rem;
+    color: var(--text-light);
+}
+.navbar-links a, .navbar-links button {
+  text-decoration: none;
+  margin-left: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+.navbar-links a {
+    color: var(--primary-color);
+}
+.navbar-links button {
+    background-color: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    cursor: pointer;
+}
+.navbar-links button:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+
+/* --- Forms & Buttons --- */
+.auth-container {
+  max-width: 400px;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: var(--surface-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+input, select, textarea {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+button {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+button:hover {
+  background-color: var(--primary-hover);
+}
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* --- Dashboard & Table --- */
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    gap: 1rem; /* Space between items */
+    margin-bottom: 1.5rem;
+}
+.toolbar input {
+    max-width: 300px;
+    margin-bottom: 0;
+}
+.table-wrapper {
+    overflow-x: auto; /* Allow horizontal scrolling on small screens */
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+th {
+  font-weight: 600;
+  background-color: #f9fafb;
+}
+td button, td a {
+    margin-right: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.875rem;
+}
+
+/* --- Modal --- */
+.modal-backdrop {
+    /* ... same styles ... */
+}
+.modal {
+    /* ... same styles ... */
+}
+
+/* --- Lead List --- */
+.lead-list li {
+    background: #f9fafb;
+    border: 1px solid var(--border-color);
+}
+
+/* --- Responsive Media Queries --- */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+        margin: 1rem auto;
+    }
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .toolbar input {
+        max-width: 100%;
+    }
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1rem;
+    }
+    .navbar-links {
+        margin-top: 1rem;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .navbar-links span {
+        margin-right: 0;
+    }
+    h1, h2 {
+        font-size: 1.5rem;
+    }
+}
