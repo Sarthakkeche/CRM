@@ -79,41 +79,57 @@ exports.deleteLead = async (req, res) => {
     }
 };
 
-exports.getDashboardStats = async (req, res) => {
+xports.getDashboardStats = async (req, res) => {
   try {
-    // 1. Total Leads (All leads in the system)
-    const totalLeads = await Lead.countDocuments({ user: req.user.id });
+    // ANALYTICS STRATEGY: 
+    // We are removing the "{ user: req.user.id }" filter for the Demo.
+    // This ensures ALL data in the database appears on your dashboard.
 
-    // 2. Opportunities (Leads that are officially 'Converted')
-    // FIX: We specifically look for status 'Converted' now
-    const opportunities = await Lead.countDocuments({ 
-      user: req.user.id, 
-      status: 'Converted' 
-    });
+    // 1. Get Customer Counts
+    const totalCustomers = await Customer.countDocuments();
 
-    // 3. Customers (People in the Customers table)
-    const totalCustomers = await Customer.countDocuments({ user: req.user.id });
-
-    // 4. Lost Leads (For the charts)
-    const lost = await Lead.countDocuments({ user: req.user.id, status: 'Lost' });
-
-    // 5. Total Value (Sum of money from Converted leads)
-    // This is a powerful aggregation for analytics
-    const valueStats = await Lead.aggregate([
-      { $match: { user: req.user._id, status: 'Converted' } },
-      { $group: { _id: null, total: { $sum: "$value" } } }
+    // 2. Get Lead Metrics using Aggregation (Data Analyst Style)
+    const leadStats = await Lead.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalLeads: { $sum: 1 }, // Count all leads
+          // Count specific statuses using $cond (Condition)
+          converted: { 
+            $sum: { $cond: [{ $eq: ["$status", "Converted"] }, 1, 0] } 
+          },
+          lost: { 
+            $sum: { $cond: [{ $eq: ["$status", "Lost"] }, 1, 0] } 
+          },
+          // Calculate Total Revenue from "Converted" leads
+          revenue: { 
+            $sum: { 
+              $cond: [
+                { $eq: ["$status", "Converted"] }, 
+                { $ifNull: ["$value", 0] }, // Add value, default to 0 if missing
+                0 
+              ] 
+            } 
+          }
+        }
+      }
     ]);
-    const revenue = valueStats.length > 0 ? valueStats[0].total : 0;
 
+    // 3. Process the Aggregation Result
+    // If no leads exist, defaults to 0
+    const stats = leadStats[0] || { totalLeads: 0, converted: 0, lost: 0, revenue: 0 };
+
+    // 4. Send the Intelligence Report
     res.json({
-      totalLeads,
-      opportunities,
-      totalCustomers,
-      lost,
-      revenue
+      totalLeads: stats.totalLeads,
+      opportunities: stats.converted, // Mapping "Converted" to "Opportunities" for UI
+      lost: stats.lost,
+      totalCustomers: totalCustomers,
+      revenue: stats.revenue
     });
+
   } catch (err) {
-    console.error(err.message);
+    console.error("Analytics Error:", err.message);
     res.status(500).send('Server Error');
   }
 };

@@ -9,11 +9,12 @@ const {
     updateLead,
     deleteLead,
 } = require('../controllers/leadController');
+router.get('/stats', auth, leadController.getDashboardStats);
 
 // No need to use auth middleware here as it's already applied in customers.js
 
 router.route('/').post(addLead).get(getLeadsForCustomer);
 router.route('/:leadId').put(updateLead).delete(deleteLead);
-router.get('/stats', auth, leadController.getDashboardStats);
+
 
 module.exports = router;
