@@ -7,9 +7,10 @@ const {
     addLead,
     getLeadsForCustomer,
     updateLead,
+    getDashboardStats,
     deleteLead,
 } = require('../controllers/leadController');
-router.get('/stats', auth, leadController.getDashboardStats);
+router.get('/stats', auth, getDashboardStats);
 
 // No need to use auth middleware here as it's already applied in customers.js
 

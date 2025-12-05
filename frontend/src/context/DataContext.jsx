@@ -1,33 +1,29 @@
-// src/context/DataContext.jsx
 import { createContext, useState, useContext, useCallback, useEffect } from 'react';
-import api from '../api/axios';
-import { useAuth } from './AuthContext';
+import api from '../api/axios'; // Uses your existing axios setup
+import { useAuth } from './AuthContext'; // We only fetch data if user is logged in
 
 const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
-  const { user } = useAuth(); // We keep this to know IF we should fetch, but the route itself is open.
+  const { user } = useAuth();
   
+  // This state holds the numbers for your Home Page
   const [summaryStats, setSummaryStats] = useState({
     totalLeads: 0,
     opportunities: 0,
-    lost: 0,
-    totalCustomers: 0,
-    revenue: 0
+    totalCustomers: 0
   });
 
   const [loading, setLoading] = useState(false);
 
+  // Function to fetch the latest numbers from the backend
   const fetchDashboardStats = useCallback(async () => {
-    // If you are logged in, we fetch. 
-    // Even if you removed auth check on backend, it's good practice to only fetch when app is ready.
-    if (!user) return; 
+    if (!user) return; // Don't fetch if no one is logged in
 
     setLoading(true);
     try {
-      // ---> CHANGED TO NEW ROUTE
-      const response = await api.get('/analytics'); 
-      console.log("Frontend received stats:", response.data); // Check your browser console!
+      // We will call a new endpoint that aggregates data from Leads and Customers
+      const response = await api.get('/leads/stats'); 
       setSummaryStats(response.data);
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -36,6 +32,7 @@ export const DataProvider = ({ children }) => {
     }
   }, [user]);
 
+  // Automatically fetch stats when the provider loads (app starts)
   useEffect(() => {
     fetchDashboardStats();
   }, [fetchDashboardStats]);
@@ -47,6 +44,7 @@ export const DataProvider = ({ children }) => {
   );
 };
 
+// Custom hook to use this context easily
 export const useData = () => {
   return useContext(DataContext);
 };
