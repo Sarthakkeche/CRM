@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create an Axios instance
 const api = axios.create({
-  baseURL: 'https://crm-88d6.onrender.com/api', 
+  baseURL: ('https://crm-88d6.onrender.com/api'), 
   headers: {
     'Content-Type': 'application/json',
   },

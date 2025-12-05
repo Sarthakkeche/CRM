@@ -78,3 +78,28 @@ exports.deleteLead = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+exports.getDashboardStats = async (req, res) => {
+  try {
+    // 1. Count all Leads (Total pool of potential)
+    const totalLeads = await Lead.countDocuments({ user: req.user.id });
+
+    // 2. Count Leads that have been converted to 'Opportunity' status
+    const opportunities = await Lead.countDocuments({ 
+      user: req.user.id, 
+      status: 'Opportunity' 
+    });
+
+    // 3. Count all Customers (People who actually bought)
+    const totalCustomers = await Customer.countDocuments({ user: req.user.id });
+
+    res.json({
+      totalLeads,
+      opportunities,
+      totalCustomers
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+};

@@ -1,6 +1,8 @@
 const express = require('express');
 // mergeParams allows us to access params from the parent router (e.g., :customerId)
 const router = express.Router({ mergeParams: true }); 
+const auth = require('../middleware/authMiddleware'); // Your auth middleware
+const leadController = require('../controllers/leadController');
 const {
     addLead,
     getLeadsForCustomer,
@@ -12,5 +14,6 @@ const {
 
 router.route('/').post(addLead).get(getLeadsForCustomer);
 router.route('/:leadId').put(updateLead).delete(deleteLead);
+router.get('/stats', auth, leadController.getDashboardStats);
 
 module.exports = router;
