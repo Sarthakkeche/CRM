@@ -25,7 +25,7 @@ const DashboardPage = () => {
     useEffect(() => {
         fetchDashboardStats();
         fetchCustomers();
-    }, [page, search]); 
+    }, []); 
 
     const fetchCustomers = async () => {
         try {

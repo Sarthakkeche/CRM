@@ -1,22 +1,21 @@
-import axios from 'axios';
+import axios from "axios";
 
-// Create an Axios instance
+// Auto-switch baseURL for local & production
 const api = axios.create({
-  baseURL: ('https://crm-88d6.onrender.com/api'), 
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL:
+    import.meta.env.MODE === "development"
+      ? "http://localhost:5000/api"
+      : "https://crm-88d6.onrender.com/api",
 });
 
-/*
-  Add a request interceptor to include the token in headers for every request.
-  This is how the backend will know the user is authenticated.
-*/
+// Attach token automatically
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 

@@ -1,41 +1,56 @@
 import { createContext, useState, useContext, useCallback, useEffect } from 'react';
-import api from '../api/axios'; // Uses your existing axios setup
-import { useAuth } from './AuthContext'; // We only fetch data if user is logged in
+import api from '../api/axios';
+import { useAuth } from './AuthContext';
 
 const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
-  const { user } = useAuth();
-  
-  // This state holds the numbers for your Home Page
+
+  // ✅ Get auth object from AuthContext
+  const { auth } = useAuth();
+  const user = auth?.user;   // <-- the actual logged-in user
+
+  // Dashboard stats state
   const [summaryStats, setSummaryStats] = useState({
     totalLeads: 0,
     opportunities: 0,
-    totalCustomers: 0
+    lost: 0,
+    totalCustomers: 0,
+    revenue: 0
   });
 
   const [loading, setLoading] = useState(false);
 
-  // Function to fetch the latest numbers from the backend
+  // Fetch stats from backend
   const fetchDashboardStats = useCallback(async () => {
-    if (!user) return; // Don't fetch if no one is logged in
+    if (!user) {
+      console.log("⛔ No user in DataContext yet. Not fetching stats.");
+      return;
+    }
 
     setLoading(true);
     try {
-      // We will call a new endpoint that aggregates data from Leads and Customers
-      const response = await api.get('/leads/stats'); 
+      console.log("📡 Fetching /leads/stats ...");
+
+      const response = await api.get('/leads/stats');
+
+      console.log("✅ Stats received:", response.data);
+
       setSummaryStats(response.data);
+
     } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
+      console.error("❌ Error fetching dashboard stats:", error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
   }, [user]);
 
-  // Automatically fetch stats when the provider loads (app starts)
+  // Auto-load stats when user logs in
   useEffect(() => {
-    fetchDashboardStats();
-  }, [fetchDashboardStats]);
+    if (user) {
+      fetchDashboardStats();
+    }
+  }, [user, fetchDashboardStats]);
 
   return (
     <DataContext.Provider value={{ summaryStats, fetchDashboardStats, loading }}>
@@ -44,7 +59,7 @@ export const DataProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use this context easily
-export const useData = () => {
-  return useContext(DataContext);
-};
+// Custom hook
+export const useData = () => useContext(DataContext);
+
+export default DataContext;
