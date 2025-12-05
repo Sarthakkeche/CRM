@@ -5,12 +5,14 @@ import Navbar from './components/layout/Navbar';
 import PrivateRoute from './components/common/PrivateRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import { DataProvider } from './context/DataContext';
 import DashboardPage from './pages/DashboardPage';
 import CustomerDetailPage from './pages/CustomerDetailPage';
 
 function App() {
   return (
     <AuthProvider>
+      <DataProvider>
       <Router>
         <Navbar />
         <main>
@@ -26,8 +28,10 @@ function App() {
             
             <Route path="/" element={<LoginPage />} />
           </Routes>
+         
         </main>
       </Router>
+       </DataProvider>
     </AuthProvider>
   );
 }

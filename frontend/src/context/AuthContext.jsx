@@ -1,8 +1,12 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect,useContext } from 'react';
 import api from '../api/axios';
 import { jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext();
+
+export const useAuth = () => {
+    return useContext(AuthContext);
+};
 
 export const AuthProvider = ({ children }) => {
     const [auth, setAuth] = useState({ token: localStorage.getItem('token'), user: null, isAuthenticated: false });
