@@ -1,227 +1,189 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useData } from '../context/DataContext';
 
-const DashboardPage = () => {
-    // --- 1. Global Stats ---
-    const { summaryStats, fetchDashboardStats, loading: statsLoading } = useData();
+// 1. CHART IMPORTS
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
+import { Pie, Bar } from 'react-chartjs-2';
 
-    // --- 2. Local State ---
-    const [activeTab, setActiveTab] = useState('customers'); // <--- THIS CONTROL IS NEW
-    const [dataList, setDataList] = useState([]); 
+// Register Chart components
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
+
+const DashboardPage = () => {
+    const { summaryStats, fetchDashboardStats, loading: statsLoading } = useData();
+    const [customers, setCustomers] = useState([]);
     const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currentItem, setCurrentItem] = useState(null); 
-    const [formData, setFormData] = useState({ name: '', email: '', phone: '', company: '', status: 'Lead' });
+    const [currentCustomer, setCurrentCustomer] = useState(null); 
+    const [formData, setFormData] = useState({ name: '', email: '', phone: '', company: '' });
 
-    // --- 3. Fetch Data based on Active Tab ---
     useEffect(() => {
-        fetchData();
-        fetchDashboardStats(); // Refresh stats whenever we switch tabs or load
-    }, [activeTab, search, fetchDashboardStats]); 
+        fetchDashboardStats();
+        fetchCustomers();
+    }, [page, search]); 
 
-    const fetchData = async () => {
+    const fetchCustomers = async () => {
         try {
-            // DYNAMIC ENDPOINT: Uses '/leads' or '/customers' depending on the tab
-            const endpoint = activeTab === 'customers' ? '/customers' : '/leads';
-            const res = await api.get(`${endpoint}?search=${search}`);
-            
-            // Safety check: ensure we read the correct part of the response
-            if(activeTab === 'customers') setDataList(res.data.customers || []);
-            else setDataList(res.data.leads || []); 
-            
+            const res = await api.get(`/customers?page=${page}&search=${search}`);
+            setCustomers(res.data.customers);
+            setTotalPages(res.data.totalPages);
         } catch (err) {
-            console.error(`Failed to fetch ${activeTab}:`, err);
+            console.error("Failed to fetch customers:", err);
         }
     };
 
-    // --- 4. Form Handlers ---
-    const handleOpenModal = (item = null) => {
-        setCurrentItem(item);
-        if (item) {
-            // Edit Mode
-            setFormData({ 
-                name: item.name, 
-                email: item.email, 
-                phone: item.phone, 
-                company: item.company, 
-                status: item.status || 'Lead' 
-            });
-        } else {
-            // Add Mode
-            setFormData({ name: '', email: '', phone: '', company: '', status: 'Lead' });
-        }
+    // --- FORM HANDLERS (Your existing logic) ---
+    const handleOpenModal = (c = null) => {
+        setCurrentCustomer(c);
+        setFormData(c ? { name: c.name, email: c.email, phone: c.phone, company: c.company } : { name: '', email: '', phone: '', company: '' });
         setIsModalOpen(true);
     };
+
+    const handleCloseModal = () => { setIsModalOpen(false); setCurrentCustomer(null); };
+    const handleFormChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
         try {
-            const endpoint = activeTab === 'customers' ? '/customers' : '/leads';
-            
-            if (currentItem) {
-                await api.put(`${endpoint}/${currentItem._id}`, formData);
-            } else {
-                await api.post(endpoint, formData);
-            }
-            
-            setIsModalOpen(false);
-            fetchData();           
-            fetchDashboardStats(); // Update the big numbers at the top
-        } catch (err) {
-            console.error("Failed to save:", err);
-            alert("Error saving. Check console for details.");
-        }
+            if (currentCustomer) await api.put(`/customers/${currentCustomer._id}`, formData);
+            else await api.post('/customers', formData);
+            fetchCustomers(); 
+            fetchDashboardStats(); 
+            handleCloseModal();
+        } catch (err) { console.error(err); }
     };
-
+    
     const handleDelete = async (id) => {
-        if(window.confirm('Are you sure you want to delete this?')){
-            try {
-                const endpoint = activeTab === 'customers' ? '/customers' : '/leads';
-                await api.delete(`${endpoint}/${id}`);
-                fetchData();
-                fetchDashboardStats();
-            } catch (err) {
-                console.error("Failed to delete:", err);
-            }
+        if(window.confirm('Delete this customer?')){
+            try { await api.delete(`/customers/${id}`); fetchCustomers(); fetchDashboardStats(); } 
+            catch (err) { console.error(err); }
         }
     };
 
-    // --- 5. Render ---
+    // --- CHART DATA CONFIGURATION ---
+    
+    // 1. PIE CHART: Success Rate (Converted vs Lost vs Open)
+    const pieData = {
+        labels: ['Converted (Won)', 'Lost', 'In Progress'],
+        datasets: [
+            {
+                data: [
+                    summaryStats.opportunities || 0, 
+                    summaryStats.lost || 0, 
+                    (summaryStats.totalLeads - (summaryStats.opportunities || 0) - (summaryStats.lost || 0))
+                ],
+                backgroundColor: ['#4ade80', '#f87171', '#60a5fa'], // Green, Red, Blue
+                borderWidth: 1,
+            },
+        ],
+    };
+
+    // 2. BAR CHART: Revenue/Growth Indicator
+    const barData = {
+        labels: ['Target Revenue', 'Actual Revenue'],
+        datasets: [
+            {
+                label: 'Revenue ($)',
+                data: [50000, summaryStats.revenue || 0], // Hardcoded target for demo
+                backgroundColor: ['#e5e7eb', '#3b82f6'],
+            },
+        ],
+    };
+
     return (
         <div className="container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
             
-            {/* STATS SECTION */}
-            <h1>Business Dashboard</h1>
+            <h1>Executive Dashboard</h1>
+            
+            {/* --- SECTION 1: KEY METRICS --- */}
             <div style={styles.statsGrid}>
                 <div style={styles.card}>
                     <h3>Total Leads</h3>
                     <p style={styles.statNumber}>{summaryStats.totalLeads}</p>
                 </div>
                 <div style={styles.card}>
-                    <h3>Opportunities</h3>
-                    <p style={styles.statNumber}>{summaryStats.opportunities}</p>
+                    <h3>Opportunities (Won)</h3>
+                    <p style={{...styles.statNumber, color: '#22c55e'}}>{summaryStats.opportunities}</p>
                 </div>
                 <div style={styles.card}>
                     <h3>Active Customers</h3>
                     <p style={styles.statNumber}>{summaryStats.totalCustomers}</p>
                 </div>
+                <div style={styles.card}>
+                    <h3>Total Revenue</h3>
+                    <p style={{...styles.statNumber, color: '#eab308'}}>${summaryStats.revenue || 0}</p>
+                </div>
             </div>
 
-            <hr style={{ margin: '30px 0', border: 'none', borderTop: '1px solid #eee' }} />
-
-            {/* TABS & ACTIONS */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                
-                {/* --- THIS IS WHERE YOU SWITCH TABS --- */}
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
-                        style={activeTab === 'customers' ? styles.activeTab : styles.tab} 
-                        onClick={() => setActiveTab('customers')}>
-                        Customers
-                    </button>
-                    <button 
-                        style={activeTab === 'leads' ? styles.activeTab : styles.tab} 
-                        onClick={() => setActiveTab('leads')}>
-                        Leads (Pipeline)
-                    </button>
+            {/* --- SECTION 2: DATA ANALYTICS GRAPHS --- */}
+            <div style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                <div style={styles.chartCard}>
+                    <h3 style={{marginBottom: '15px', textAlign: 'center'}}>Lead Conversion Rate</h3>
+                    <div style={{ height: '250px', display: 'flex', justifyContent: 'center' }}>
+                        <Pie data={pieData} />
+                    </div>
                 </div>
+                <div style={styles.chartCard}>
+                    <h3 style={{marginBottom: '15px', textAlign: 'center'}}>Revenue Growth</h3>
+                    <div style={{ height: '250px' }}>
+                        <Bar options={{ maintainAspectRatio: false }} data={barData} />
+                    </div>
+                </div>
+            </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <input
-                        type="text"
-                        placeholder={`Search ${activeTab}...`}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        style={styles.input}
-                    />
-                    {/* The button text changes automatically! */}
-                    <button onClick={() => handleOpenModal()} style={styles.primaryBtn}>
-                        + Add {activeTab === 'customers' ? 'Customer' : 'Lead'}
-                    </button>
+            <hr style={{ margin: '50px 0' }} />
+
+            {/* --- SECTION 3: CUSTOMER MANAGEMENT --- */}
+            <div className="toolbar" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <h2>All Customers</h2>
+                <div>
+                    <input type="text" placeholder="Search..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} style={styles.input} />
+                    <button onClick={() => handleOpenModal()} style={styles.btn}>Add Customer</button>
                 </div>
             </div>
             
-            {/* DATA TABLE */}
-            <div style={styles.tableContainer}>
-                <table style={styles.table}>
-                    <thead>
-                        <tr style={{ background: '#f8f9fa', textAlign: 'left' }}>
-                            <th style={styles.th}>Name</th>
-                            <th style={styles.th}>Email</th>
-                            <th style={styles.th}>Company</th>
-                            {/* Status only shows for Leads */}
-                            {activeTab === 'leads' && <th style={styles.th}>Status</th>} 
-                            <th style={styles.th}>Actions</th>
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <thead>
+                    <tr style={{ background: '#f8f9fa', textAlign: 'left' }}>
+                        <th style={{ padding: '15px' }}>Name</th>
+                        <th style={{ padding: '15px' }}>Email</th>
+                        <th style={{ padding: '15px' }}>Phone</th>
+                        <th style={{ padding: '15px' }}>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {customers.map(c => (
+                        <tr key={c._id} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '15px' }}>{c.name}</td>
+                            <td style={{ padding: '15px' }}>{c.email}</td>
+                            <td style={{ padding: '15px' }}>{c.phone}</td>
+                            <td style={{ padding: '15px' }}>
+                                <Link to={`/customers/${c._id}`} style={styles.linkBtn}>View</Link>
+                                <button onClick={() => handleOpenModal(c)} style={styles.actionBtn}>Edit</button>
+                                <button onClick={() => handleDelete(c._id)} style={{...styles.actionBtn, color: 'red', borderColor: 'red'}}>Delete</button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {dataList.length > 0 ? (
-                            dataList.map(item => (
-                                <tr key={item._id} style={{ borderBottom: '1px solid #eee' }}>
-                                    <td style={styles.td}>{item.name}</td>
-                                    <td style={styles.td}>{item.email}</td>
-                                    <td style={styles.td}>{item.company}</td>
-                                    
-                                    {activeTab === 'leads' && (
-                                        <td style={styles.td}>
-                                            <span style={item.status === 'Opportunity' ? styles.badgeOpp : styles.badgeLead}>
-                                                {item.status || 'Lead'}
-                                            </span>
-                                        </td>
-                                    )}
+                    ))}
+                </tbody>
+            </table>
 
-                                    <td style={styles.td}>
-                                        <button onClick={() => handleOpenModal(item)} style={styles.actionBtn}>Edit</button>
-                                        <button onClick={() => handleDelete(item._id)} style={{...styles.actionBtn, color: 'red'}}>Delete</button>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>No {activeTab} found.</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* MODAL */}
+            {/* Pagination & Modals remain same ... */}
             {isModalOpen && (
                 <div style={styles.backdrop}>
                     <div style={styles.modal}>
-                        <h2>{currentItem ? `Edit ${activeTab === 'customers' ? 'Customer' : 'Lead'}` : `Add ${activeTab === 'customers' ? 'Customer' : 'Lead'}`}</h2>
-                        
-                        <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                            <input type="text" name="name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Name" required style={styles.formInput} />
-                            <input type="email" name="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="Email" required style={styles.formInput} />
-                            <input type="text" name="phone" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="Phone" style={styles.formInput} />
-                            <input type="text" name="company" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} placeholder="Company" style={styles.formInput} />
-
-                            {/* --- CONVERSION LOGIC IS HERE --- */}
-                            {/* This dropdown ONLY appears if you are on the 'Leads' tab */}
-                            {activeTab === 'leads' && (
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <label style={{ fontSize: '0.9rem', marginBottom: '5px', fontWeight: 'bold' }}>Pipeline Status:</label>
-                                    <select 
-                                        name="status" 
-                                        value={formData.status} 
-                                        onChange={(e) => setFormData({...formData, status: e.target.value})}
-                                        style={styles.formInput}
-                                    >
-                                        <option value="Lead">Lead (Potential)</option>
-                                        <option value="Opportunity">Opportunity (Interested)</option>
-                                        <option value="Customer">Closed Customer</option>
-                                    </select>
-                                </div>
-                            )}
-
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                <button type="submit" style={styles.primaryBtn}>Save</button>
-                                <button type="button" onClick={() => setIsModalOpen(false)} style={styles.cancelBtn}>Cancel</button>
-                            </div>
+                        <h2>{currentCustomer ? 'Edit' : 'Add'} Customer</h2>
+                        <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <input type="text" name="name" value={formData.name} onChange={handleFormChange} placeholder="Name" required style={styles.formInput} />
+                            <input type="email" name="email" value={formData.email} onChange={handleFormChange} placeholder="Email" required style={styles.formInput} />
+                            <input type="text" name="phone" value={formData.phone} onChange={handleFormChange} placeholder="Phone" style={styles.formInput} />
+                            <input type="text" name="company" value={formData.company} onChange={handleFormChange} placeholder="Company" style={styles.formInput} />
+                            <button type="submit" style={styles.btn}>Save</button>
+                            <button type="button" onClick={handleCloseModal} style={{...styles.btn, background: '#ccc'}}>Cancel</button>
                         </form>
                     </div>
                 </div>
@@ -230,26 +192,18 @@ const DashboardPage = () => {
     );
 };
 
-// Styles (You can tweak these colors)
 const styles = {
     statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' },
-    card: { background: '#fff', padding: '20px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', textAlign: 'center' },
-    statNumber: { fontSize: '2.5rem', fontWeight: 'bold', color: '#007bff', margin: '5px 0' },
-    tab: { padding: '10px 20px', cursor: 'pointer', background: 'transparent', border: '1px solid #ccc', borderRadius: '5px' },
-    activeTab: { padding: '10px 20px', cursor: 'pointer', background: '#007bff', color: '#fff', border: '1px solid #007bff', borderRadius: '5px' },
-    tableContainer: { overflowX: 'auto', background: '#fff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
-    table: { width: '100%', borderCollapse: 'collapse' },
-    th: { padding: '15px', borderBottom: '2px solid #eee' },
-    td: { padding: '15px', borderBottom: '1px solid #eee' },
-    input: { padding: '8px 12px', borderRadius: '5px', border: '1px solid #ddd' },
-    primaryBtn: { padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' },
-    cancelBtn: { padding: '10px 20px', background: '#ccc', color: '#333', border: 'none', borderRadius: '5px', cursor: 'pointer' },
-    actionBtn: { padding: '5px 10px', marginRight: '5px', cursor: 'pointer', background: 'transparent', border: '1px solid #ddd', borderRadius: '4px' },
-    formInput: { padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '1rem' },
-    backdrop: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-    modal: { background: 'white', padding: '30px', borderRadius: '10px', width: '90%', maxWidth: '400px' },
-    badgeLead: { background: '#e2e8f0', color: '#475569', padding: '4px 8px', borderRadius: '12px', fontSize: '0.85rem' },
-    badgeOpp: { background: '#dbeafe', color: '#1e40af', padding: '4px 8px', borderRadius: '12px', fontSize: '0.85rem' }
+    card: { background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', textAlign: 'center', border: '1px solid #eee' },
+    chartCard: { background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', border: '1px solid #eee' },
+    statNumber: { fontSize: '2rem', fontWeight: 'bold', color: '#1e293b', margin: '10px 0' },
+    backdrop: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' },
+    modal: { background: 'white', padding: '30px', borderRadius: '8px', width: '400px' },
+    formInput: { padding: '10px', fontSize: '1rem', border: '1px solid #ddd', borderRadius: '4px' },
+    input: { padding: '8px', marginRight: '10px', border: '1px solid #ddd', borderRadius: '4px' },
+    btn: { padding: '8px 16px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '5px' },
+    linkBtn: { marginRight: '10px', textDecoration: 'none', color: '#007bff', fontWeight: 'bold' },
+    actionBtn: { marginRight: '5px', background: 'transparent', border: '1px solid #ddd', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }
 };
 
 export default DashboardPage;

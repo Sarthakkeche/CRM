@@ -81,22 +81,36 @@ exports.deleteLead = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    // 1. Count all Leads (Total pool of potential)
+    // 1. Total Leads (All leads in the system)
     const totalLeads = await Lead.countDocuments({ user: req.user.id });
 
-    // 2. Count Leads that have been converted to 'Opportunity' status
+    // 2. Opportunities (Leads that are officially 'Converted')
+    // FIX: We specifically look for status 'Converted' now
     const opportunities = await Lead.countDocuments({ 
       user: req.user.id, 
-      status: 'Opportunity' 
+      status: 'Converted' 
     });
 
-    // 3. Count all Customers (People who actually bought)
+    // 3. Customers (People in the Customers table)
     const totalCustomers = await Customer.countDocuments({ user: req.user.id });
+
+    // 4. Lost Leads (For the charts)
+    const lost = await Lead.countDocuments({ user: req.user.id, status: 'Lost' });
+
+    // 5. Total Value (Sum of money from Converted leads)
+    // This is a powerful aggregation for analytics
+    const valueStats = await Lead.aggregate([
+      { $match: { user: req.user._id, status: 'Converted' } },
+      { $group: { _id: null, total: { $sum: "$value" } } }
+    ]);
+    const revenue = valueStats.length > 0 ? valueStats[0].total : 0;
 
     res.json({
       totalLeads,
       opportunities,
-      totalCustomers
+      totalCustomers,
+      lost,
+      revenue
     });
   } catch (err) {
     console.error(err.message);
