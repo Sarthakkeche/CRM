@@ -79,7 +79,7 @@ exports.deleteLead = async (req, res) => {
     }
 };
 
-xports.getDashboardStats = async (req, res) => {
+exports.getDashboardStats = async (req, res) => {
   try {
     // ANALYTICS STRATEGY: 
     // We are removing the "{ user: req.user.id }" filter for the Demo.
